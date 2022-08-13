@@ -163,7 +163,6 @@ memory = ReplayMemoryIR(args.replay_size, args.seed)
 # Training Loop
 total_numsteps = 0
 updates = 0
-latest_avg_reward = float("-inf")
 
 for i_episode in itertools.count(1):
     episode_reward = 0
@@ -203,7 +202,8 @@ for i_episode in itertools.count(1):
 
         # Ignore the "done" signal if it comes from hitting the time horizon.
         # (https://github.com/openai/spinningup/blob/master/spinup/algos/sac/sac.py)
-        mask = 1 if episode_steps == env._max_episode_steps else float(not done)
+        mask = 1 if episode_steps == env._max_episode_steps else float(
+            not done)
 
         memory.push(
             state, action, reward, next_state, mask
@@ -242,13 +242,10 @@ for i_episode in itertools.count(1):
 
         print("----------------------------------------")
         print(
-            "Test Episodes: {}, Avg. Reward: {}".format(episodes, round(avg_reward, 2))
+            "Test Episodes: {}, Avg. Reward: {}".format(
+                episodes, round(avg_reward, 2))
         )
         print("----------------------------------------")
-
-        if latest_avg_reward <= avg_reward or i_episode % 100 == 0:
-            agent.save_checkpoint(args.env_name, str(round(avg_reward, 2)) + ".ckpt")
-            if latest_avg_reward < avg_reward:
-                latest_avg_reward = avg_reward
-
+        agent.save_checkpoint(args.env_name,  datetime.datetime.now().strftime(
+            "%Y-%m-%d_%H-%M-R-")+str(round(avg_reward, 2)) + ".ckpt")
 env.close()
