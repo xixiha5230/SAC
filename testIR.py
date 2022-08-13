@@ -9,7 +9,7 @@ import torch
 from Network.ModelIR import StateNetwork, GaussianPolicyIR
 from Envwrapper.UnityEnv import UnityWrapper
 
-env_name = "venv_605_easy"
+env_name = "venv_605_middle"
 seed = 12345
 device = "cuda" if torch.cuda.is_available else "cpu"
 
@@ -32,7 +32,11 @@ def select_action(policy, state_net, state):
         torch.FloatTensor(state[0]).to(device).unsqueeze(0),
         torch.FloatTensor(state[1]).to(device).unsqueeze(0),
     ]
-    _, _, action = policy.sample(state_net(state_tmp))
+    eval = True
+    if eval:
+        _, _, action = policy.sample(state_net(state_tmp))
+    else:
+        action, _, _ = policy.sample(state_net(state_tmp))
     return action.detach().cpu().numpy()[0]
 
 
