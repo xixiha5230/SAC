@@ -1,140 +1,60 @@
 import argparse
+from email import policy
+from inspect import stack
 import os
 from time import sleep
 import gym
 import glob
-from Algorithm.SACIR import SACIR
+import torch
+from Network.ModelIR import StateNetwork, GaussianPolicyIR
 from Envwrapper.UnityEnv import UnityWrapper
 
-parser = argparse.ArgumentParser(description="PyTorch Soft Actor-Critic Args")
-parser.add_argument(
-    "--env-name",
-    default="venv_605_easy",
-    help="Mujoco Gym environment (default: LunarLander-v2)",
-)
-parser.add_argument(
-    "--policy",
-    default="Gaussian",
-    help="Policy Type: Gaussian | Deterministic (default: Gaussian)",
-)
-parser.add_argument(
-    "--eval",
-    type=bool,
-    default=True,
-    help="Evaluates a policy a policy every 10 episode (default: True)",
-)
-parser.add_argument(
-    "--gamma",
-    type=float,
-    default=0.99,
-    metavar="G",
-    help="discount factor for reward (default: 0.99)",
-)
-parser.add_argument(
-    "--tau",
-    type=float,
-    default=0.005,
-    metavar="G",
-    help="target smoothing coefficient(τ) (default: 0.005)",
-)
-parser.add_argument(
-    "--lr",
-    type=float,
-    default=0.0003,
-    metavar="G",
-    help="learning rate (default: 0.0003)",
-)
-parser.add_argument(
-    "--alpha",
-    type=float,
-    default=0.1,
-    metavar="G",
-    help="Temperature parameter α determines the relative importance of the entropy\
-                            term against the reward (default: 0.2)",
-)
-parser.add_argument(
-    "--automatic_entropy_tuning",
-    type=bool,
-    default=False,
-    metavar="G",
-    help="Automaically adjust α (default: False)",
-)
-parser.add_argument(
-    "--seed",
-    type=int,
-    default=123456,
-    metavar="N",
-    help="random seed (default: 123456)",
-)
-parser.add_argument(
-    "--batch_size", type=int, default=256, metavar="N", help="batch size (default: 256)"
-)
-parser.add_argument(
-    "--num_steps",
-    type=int,
-    default=1000001,
-    metavar="N",
-    help="maximum number of steps (default: 1000000)",
-)
-parser.add_argument(
-    "--hidden_size",
-    type=int,
-    default=256,
-    metavar="N",
-    help="hidden size (default: 256)",
-)
-parser.add_argument(
-    "--updates_per_step",
-    type=int,
-    default=1,
-    metavar="N",
-    help="model updates per simulator step (default: 1)",
-)
-parser.add_argument(
-    "--start_steps",
-    type=int,
-    default=10000,
-    metavar="N",
-    help="Steps sampling random actions (default: 10000)",
-)
-parser.add_argument(
-    "--target_update_interval",
-    type=int,
-    default=1,
-    metavar="N",
-    help="Value target update per no. of updates per step (default: 1)",
-)
-parser.add_argument(
-    "--replay_size",
-    type=int,
-    default=1000000,
-    metavar="N",
-    help="size of replay buffer (default: 10000000)",
-)
-parser.add_argument("--cuda", action="store_true", help="run on CUDA (default: False)")
-args = parser.parse_args()
+env_name = "venv_605_easy"
+seed = 12345
+device = "cuda" if torch.cuda.is_available else "cpu"
 
 
-env = UnityWrapper(args.env_name, worker_id=1, seed=args.seed)
-# env = UnityWrapper(None, worker_id=123)
-env.reset(seed=args.seed)
-env.action_space.seed(args.seed)
+def load_checkpoint(obs_space, num_action, action_space, ckpt_path):
+    state_net = StateNetwork(obs_space, 256, 64).to(device)
+    policy = GaussianPolicyIR(64, num_action, 256, action_space).to(device)
+    print("Loading models from {}".format(ckpt_path))
+    if ckpt_path is not None:
+        checkpoint = torch.load(ckpt_path)
+        state_net.load_state_dict(checkpoint["state_net_state_dict"])
+        policy.load_state_dict(checkpoint["policy_state_dict"])
+        state_net.eval()
+        policy.eval()
+    return state_net, policy
 
-agent = SACIR(env.observation_space, env.action_space, args)
-list_of_files = glob.glob("result/{}/checkpoints/*".format(args.env_name))
+
+def select_action(policy, state_net, state):
+    state_tmp = [
+        torch.FloatTensor(state[0]).to(device).unsqueeze(0),
+        torch.FloatTensor(state[1]).to(device).unsqueeze(0),
+    ]
+    _, _, action = policy.sample(state_net(state_tmp))
+    return action.detach().cpu().numpy()[0]
+
+
+env = UnityWrapper("result/{}/env".format(env_name), worker_id=2, seed=seed)
+env.reset(seed=seed)
+env.action_space.seed(seed)
+
+# list_of_files = glob.glob("result/{}/checkpoints/*".format(env_name))
 # latest_file = max(list_of_files, key=os.path.getctime)
-latest_file = "result/{}/checkpoints/10.0.ckpt".format(args.env_name)
-
+ckpt = "2022-08-13_17-06-R-2.0.ckpt"
+latest_file = "result/{}/checkpoints/{}".format(env_name, ckpt)
 print("Test on : ", latest_file)
-agent.load_checkpoint(latest_file)
+state_net, policy_net = load_checkpoint(
+    env.observation_space, env.action_size, env.action_space, latest_file)
 
 while True:
     done = False
-    obs = env.reset(seed=args.seed)
+    obs = env.reset(seed=seed)
     total_reward = 0
     step = 0
     while not done:
-        action = agent.select_action(obs, evaluate=True)
+        action = select_action(policy_net, state_net, obs)
         obs, reward, done, _ = env.step(action)
         env.render()
         sleep(0.01)
