@@ -123,13 +123,13 @@ class Conv1d(nn.Module):
 
 
 class StateNetwork(nn.Module):
-    def __init__(self, obs_shape, hidden_dim=256, out_dim=64):
-        assert obs_shape[0].shape == (84, 84, 4)
-        assert obs_shape[1].shape == (202,)
+    def __init__(self, obs_space, hidden_dim=256, out_dim=64):
+        assert obs_space[0].shape == (84, 84, 4)
+        assert obs_space[1].shape == (202,)
         super(StateNetwork, self).__init__()
 
-        self.conv2d = Conv2d(obs_shape[0].shape, hidden_dim, 64)
-        self.conv1d = Conv1d(obs_shape[1].shape[-1] // 2, 2, hidden_dim, 64)
+        self.conv2d = Conv2d(obs_space[0].shape, hidden_dim, 64)
+        self.conv1d = Conv1d(obs_space[1].shape[-1] // 2, 2, hidden_dim, 64)
         self.fc_ir = nn.Sequential(nn.Linear(64 + 64, out_dim), nn.ReLU())
         self.apply(weights_init_)
 
@@ -144,17 +144,15 @@ class StateNetwork(nn.Module):
 
 
 class QNetworkIR(nn.Module):
-    def __init__(self, obs_shape, num_actions, hidden_dim=256):
+    def __init__(self, obs_dim, num_actions, hidden_dim=256):
         super(QNetworkIR, self).__init__()
-        self.state = StateNetwork(obs_shape, 256, 64)
         # Q1 architecture
-        self.q_1 = Linear(64 + num_actions, hidden_dim, 1)
+        self.q_1 = Linear(obs_dim + num_actions, hidden_dim, 1)
         # Q2 architecture
-        self.q_2 = Linear(64 + num_actions, hidden_dim, 1)
+        self.q_2 = Linear(obs_dim + num_actions, hidden_dim, 1)
         self.apply(weights_init_)
 
     def forward(self, state, action):
-        state = self.state(state)
         xu = torch.cat([state, action], dim=-1)
         q_1 = self.q_1(xu)
         q_2 = self.q_2(xu)
@@ -167,11 +165,10 @@ epsilon = 1e-6
 
 
 class GaussianPolicyIR(GaussianPolicy):
-    def __init__(self, obs_shape, num_actions, hidden_dim=256, action_space=None):
+    def __init__(self, obs_dim, num_actions, hidden_dim=256, action_space=None):
         super(GaussianPolicyIR, self).__init__()
-        self.state = StateNetwork(obs_shape, 256, 64)
-        self.mean_linear = Linear(64, hidden_dim, num_actions)
-        self.log_std_linear = Linear(64, hidden_dim, num_actions)
+        self.mean_linear = Linear(obs_dim, hidden_dim, num_actions)
+        self.log_std_linear = Linear(obs_dim, hidden_dim, num_actions)
         # action rescaling
         if action_space is None:
             self.action_scale = torch.tensor(1.0)
@@ -186,7 +183,6 @@ class GaussianPolicyIR(GaussianPolicy):
         self.apply(weights_init_)
 
     def forward(self, state):
-        state = self.state(state)
         mean = self.mean_linear(state)
         log_std = self.log_std_linear(state)
         log_std = torch.clamp(log_std, min=LOG_SIG_MIN, max=LOG_SIG_MAX)
