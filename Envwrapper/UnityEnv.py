@@ -39,11 +39,18 @@ class UnityWrapper(UnityToGymWrapper):
 
 
 if __name__ == "__main__":
+    import cv2
     env = UnityWrapper(
-        "venv_605",
+        None,
         seed=0,
     )
     env.reset(0)
-    a = env.reset()
-
-    print(a)
+    obs = env.reset()
+    done = False
+    while not done:
+        cv2.imshow("obs0", cv2.cvtColor(obs[0], cv2.COLOR_BGR2RGB))
+        cv2.imshow("obs1", cv2.cvtColor(obs[1], cv2.COLOR_BGR2RGB))
+        cv2.imshow("obs2", cv2.cvtColor(obs[2], cv2.COLOR_BGR2RGB))
+        cv2.waitKey()
+        obs, _, done, _ = env.step(env.action_space.sample())
+        
