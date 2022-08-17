@@ -124,7 +124,7 @@ class Conv1d(nn.Module):
 
 class StateNetwork(nn.Module):
     def __init__(self, obs_space, hidden_dim=256, out_dim=64):
-        assert obs_space[0].shape == (84, 84, 4)
+        assert obs_space[0].shape == (84, 84, 3)
         assert obs_space[1].shape == (202,)
         super(StateNetwork, self).__init__()
 
