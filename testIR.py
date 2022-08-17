@@ -1,10 +1,4 @@
-import argparse
-from email import policy
-from inspect import stack
-import os
-from time import sleep
-import gym
-import glob
+from time import sleep, time
 import torch
 from Network.ModelIR import StateNetwork, GaussianPolicyIR
 from Envwrapper.UnityEnv import UnityWrapper
@@ -40,19 +34,24 @@ def select_action(policy, state_net, state):
     return action.detach().cpu().numpy()[0]
 
 
-env = UnityWrapper("result/{}/env".format(env_name), worker_id=2, seed=seed)
+env = UnityWrapper(None,  seed=seed)
+# env = UnityWrapper("result/{}/env".format(env_name), worker_id=2, seed=seed)
 env.reset(seed=seed)
 env.action_space.seed(seed)
 
 # list_of_files = glob.glob("result/{}/checkpoints/*".format(env_name))
 # latest_file = max(list_of_files, key=os.path.getctime)
-ckpt = "2022-08-13_17-06-R-2.0.ckpt"
+ckpt = "2022-08-16_11-16-R-6.0.ckpt"
 latest_file = "result/{}/checkpoints/{}".format(env_name, ckpt)
 print("Test on : ", latest_file)
 state_net, policy_net = load_checkpoint(
     env.observation_space, env.action_size, env.action_space, latest_file)
 
-while True:
+TIMES = 100
+times = TIMES
+success_counter = 0
+collision_counter = 0
+while times > 0:
     done = False
     obs = env.reset(seed=seed)
     total_reward = 0
@@ -64,4 +63,11 @@ while True:
         sleep(0.01)
         total_reward += reward
         step += 1
+    if total_reward > 0:
+        success_counter += 1
+    if total_reward < 0:
+        collision_counter += 1
+    times -= 1
     print("Reward: ", total_reward, " Step: ", step)
+print("Sucess: ",  success_counter, " collision: ",
+      collision_counter, " Total: ", TIMES)

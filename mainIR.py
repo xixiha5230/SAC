@@ -12,7 +12,7 @@ from Envwrapper.UnityEnv import UnityWrapper
 parser = argparse.ArgumentParser(description="PyTorch Soft Actor-Critic Args")
 parser.add_argument(
     "--env-name",
-    default="venv_605_easy",
+    default="venv_605_middle",
     help="Mujoco Gym environment (default: HalfCheetah-v2)",
 )
 parser.add_argument(
@@ -75,7 +75,7 @@ parser.add_argument(
 parser.add_argument(
     "--num_steps",
     type=int,
-    default=1000001,
+    default=10000001,
     metavar="N",
     help="maximum number of steps (default: 1000000)",
 )
