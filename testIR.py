@@ -1,4 +1,3 @@
-from time import sleep, time
 import torch
 from Network.ModelIR import StateNetwork, GaussianPolicyIR
 from Envwrapper.UnityEnv import UnityWrapper
@@ -34,8 +33,8 @@ def select_action(policy, state_net, state):
     return action.detach().cpu().numpy()[0]
 
 
-env = UnityWrapper(None,  seed=seed)
-# env = UnityWrapper("result/{}/env".format(env_name), worker_id=2, seed=seed)
+# env = UnityWrapper(None,  seed=seed)
+env = UnityWrapper("result/{}/env".format(env_name), worker_id=2, seed=seed)
 env.reset(seed=seed)
 env.action_space.seed(seed)
 
@@ -60,7 +59,6 @@ while times > 0:
         action = select_action(policy_net, state_net, obs)
         obs, reward, done, _ = env.step(action)
         env.render()
-        sleep(0.01)
         total_reward += reward
         step += 1
     if total_reward > 0:
