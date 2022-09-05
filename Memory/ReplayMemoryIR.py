@@ -10,12 +10,18 @@ class ReplayMemoryIR(ReplayMemory):
         img_next = []
         ray = []
         ray_next = []
+        action = []
+        reward = []
+        done = []
         for i in batch:
             img.append(i[0][0])
             ray.append(i[0][1])
+            action.append(i[1])
+            reward.append(i[2])
             img_next.append(i[3][0])
             ray_next.append(i[3][1])
-        _, action, reward, _, done = map(np.stack, zip(*batch))
+            done.append(i[4])
+            
         state = [img, ray]
         next_state = [img_next, ray_next]
-        return state, action, reward, next_state, done
+        return state, np.array(action), np.array(reward), next_state,  np.array(done)
