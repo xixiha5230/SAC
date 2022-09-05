@@ -200,7 +200,7 @@ def generate_ray_index(length):
     for i in reversed(range(1, length)):
         if i % 2 == 0:
             bool_index.append(i)
-    bool_index.append(0)
+    # bool_index.append(0)
     for i in range(1, length):
         if i % 2 != 0:
             bool_index.append(i)
