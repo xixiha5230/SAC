@@ -1,4 +1,5 @@
 import numpy as np
+import cv2
 from typing import Optional, List, Union
 from mlagents_envs.side_channel.side_channel import SideChannel
 from mlagents_envs.environment import UnityEnvironment
@@ -38,7 +39,7 @@ class UnityWrapper(UnityToGymWrapper):
         return super().reset()
 
 
-def laybelimg(img, xyxyns, pixel=1):
+def label_img(img, xyxyns, pixel=1):
     global img_counter
     colors = [(255, 233, 200), (23, 66, 122),
               (0, 0, 123), (233, 200, 255), (23, 66, 1220)]
@@ -53,7 +54,6 @@ def laybelimg(img, xyxyns, pixel=1):
     if len(xyxyns) == 0:
         # cv2.imwrite("cache/{}.jpg".format(img_counter), img)
         print("no object")
-        img_counter += 1
     return img
 
 
@@ -66,7 +66,8 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import matplotlib.animation as animation
 
-    model = torch.hub.load('ultralytics/yolov5', 'custom', path='./DONE1.pt')
+    model = torch.hub.load('ultralytics/yolov5', 'custom',
+                           path='./Pretrain/venv_605_middle.pt')
     env = UnityWrapper(
         "venv_605_middle",
         seed=random.randint(0, 9999),
@@ -85,15 +86,18 @@ if __name__ == "__main__":
     for _ in range(10):
         done = False
         obs = env.reset()
+
         while not done:
             img = cv2.cvtColor(obs[0], cv2.COLOR_BGR2RGB)
             img = cv2.normalize(img, None, 0, 255, cv2.NORM_MINMAX, cv2.CV_8U)
+            img = [img] * 10
             results = model(img)
-            img = laybelimg(img, results.xyxyn[0])
+            img = label_img(img, results.xyxyn[0])
             img_array.append(
                 [ax.imshow(cv2.cvtColor(img, cv2.COLOR_RGB2BGR), animated=True)]
             )
             cv2.imshow("detaction", img)
+            cv2.imshow("depth", obs[1])
             cv2.waitKey(10)
             obs, _, done, _ = env.step(env.action_space.sample())
 
